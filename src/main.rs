@@ -1,32 +1,49 @@
-use clap::Parser;
+use std::env;
+use std::fs;
+use std::io::{Read, Write};
+use std::path::Path;
 
-/// A CLI application that takes origin, replace, and path arguments
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
 struct Args {
-    /// The origin string
-    #[arg(long, default_value = "default_origin")]
-    origin: String,
-
-    /// The replace string
-    #[arg(long, default_value = "default_replace")]
-    replace: String,
-
-    /// The path to the file or directory
-    #[arg(long, default_value = "./default_path.txt")]
-    path: String,
+    from: String,
+    to: String,
+    directory: String,
 }
 
-fn main() {
-    let args = Args::parse();
-
-    println!("Origin: {}", args.origin);
-    println!("Replace: {}", args.replace);
-    println!("Path: {}", args.path);
-
-    if args.origin == "default_origin" && args.replace == "default_replace" && args.path == "./default_path.txt" {
-        println!("Running with default values. Use --help for more information on available options.");
-    } else {
-        println!("Running with provided values.");
+fn parse_args() -> Result<Args, &'static str> {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 4 {
+        return Err("Usage: program <from> <to> <directory>");
     }
+    Ok(Args {
+        from: args[1].clone(),
+        to: args[2].clone(),
+        directory: args[3].clone(),
+    })
+}
+
+fn replace_in_file(path: &Path, from: &str, to: &str) -> std::io::Result<()> {
+    let mut content = String::new();
+    let mut file = fs::File::open(path)?;
+    file.read_to_string(&mut content)?;
+
+    let new_content = content.replace(from, to);
+
+    let mut file = fs::File::create(path)?;
+    file.write_all(new_content.as_bytes())?;
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = parse_args()?;
+
+    for entry in fs::read_dir(args.directory)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            replace_in_file(&path, &args.from, &args.to)?;
+            println!("Processed: {:?}", path);
+        }
+    }
+
+    Ok(())
 }
