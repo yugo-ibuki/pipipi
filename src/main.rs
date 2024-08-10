@@ -9,10 +9,11 @@ struct Args {
     directory: String,
 }
 
-fn parse_args() -> Result<Args, &'static str> {
+fn parse_args() -> Result<Args, String> {
     let args: Vec<String> = env::args().collect();
+    println!("{:?}", args);
     if args.len() != 4 {
-        return Err("Usage: program <from> <to> <directory>");
+        return Err(String::from("Usage: program <from> <to> <directory>"));
     }
     Ok(Args {
         from: args[1].clone(),
